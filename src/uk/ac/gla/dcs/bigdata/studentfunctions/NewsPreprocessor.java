@@ -1,13 +1,24 @@
 package uk.ac.gla.dcs.bigdata.studentfunctions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import java.util.function.Function;
+
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Row;
+import org.apache.spark.util.LongAccumulator;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
+import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
@@ -22,6 +33,17 @@ public class NewsPreprocessor implements MapFunction<NewsArticle,NewsArticleProc
 	
 		private transient TextPreProcessor processor;
 		
+		LongAccumulator totalCorpusDocuments;
+		
+		public NewsPreprocessor(LongAccumulator totalCorpusDocuments) {
+			super();
+			this.totalCorpusDocuments = totalCorpusDocuments;
+			
+			
+		}
+
+
+
 		@Override
 		public NewsArticleProcessed call(NewsArticle value) throws Exception {
 		
@@ -30,23 +52,15 @@ public class NewsPreprocessor implements MapFunction<NewsArticle,NewsArticleProc
 			String uniqueId = null;
 			List<String> titleProcessed = new ArrayList<String>();
 			List<String> contentProcessed = new ArrayList<String>();
-			
-			 
-			if(value.getId() !=null && !value.getId().isEmpty() && value.getTitle() !=null && !value.getTitle().isEmpty()) {
-			
+//			
+//			
 				uniqueId = (value.getId());
-				System.out.println(uniqueId);
+			//	System.out.println(uniqueId);
 				titleProcessed = processor.process(value.getTitle());
-				
-				
-				System.out.println("Title " + titleProcessed);
-				
-			
-			
-			System.out.println("-----------------------------------------------------");
-			
+
 			
 			List<ContentItem> contents = value.getContents();
+			List<String> document = new ArrayList<String>();
 			
 			int count = 0;
 			for(ContentItem items: contents)
@@ -59,21 +73,22 @@ public class NewsPreprocessor implements MapFunction<NewsArticle,NewsArticleProc
 					
 					
 					count = count +1;
-					//System.out.println(subtype);
 					
-
-			
 				}
 	     		
 			}
-			}
 			
-			System.out.println("Content" + contentProcessed);
+		
 			
 			NewsArticleProcessed newsArticle = new NewsArticleProcessed(uniqueId, titleProcessed, contentProcessed );
 			
+			totalCorpusDocuments.add(1);
 			
-		return newsArticle;
+			return newsArticle;
+			
+
+			}
+				
+			
 		
 		}
-}

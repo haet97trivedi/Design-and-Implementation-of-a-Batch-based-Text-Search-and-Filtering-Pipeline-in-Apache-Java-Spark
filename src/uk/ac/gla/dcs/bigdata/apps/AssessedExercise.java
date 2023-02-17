@@ -1,19 +1,35 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.util.LongAccumulator;
 
+import static org.apache.spark.sql.functions.*;
+
+import scala.Tuple2;
+import scala.collection.immutable.Seq;
+import scala.jdk.Accumulator;
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.studentfunctions.NewsArticleDPHProcessor;
 import uk.ac.gla.dcs.bigdata.studentfunctions.NewsPreprocessor;
+import uk.ac.gla.dcs.bigdata.studentfunctions.QueryTermFreq;
+import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleDPHScore;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
 /**
@@ -92,18 +108,43 @@ public class AssessedExercise {
 		// Load queries and news articles
 		Dataset<Row> queriesjson = spark.read().text(queryFile);
 		Dataset<Row> newsjson = spark.read().text(newsFile); // read in files as string rows, one row per article
-		
+			
 		// Perform an initial conversion from Dataset<Row> to Query and NewsArticle Java objects
 		Dataset<Query> queries = queriesjson.map(new QueryFormaterMap(), Encoders.bean(Query.class)); // this converts each row into a Query
 		Dataset<NewsArticle> news = newsjson.map(new NewsFormaterMap(), Encoders.bean(NewsArticle.class)); // this converts each row into a NewsArticle
+		//System.out.println(queries.collectAsList());
 		
 		//----------------------------------------------------------------
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
-		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsPreprocessor(), Encoders.bean(NewsArticleProcessed.class)); // this converts each row into a NewsArticle
+		Dataset<NewsArticle> filteredData = news.filter(col("id").isNotNull().and(col("title").isNotNull().and(col("contents.subtype").isNotNull().and(col("contents.content").isNotNull()))));
+        
+		LongAccumulator totalCorpusTerms = spark.sparkContext().longAccumulator();
+		LongAccumulator totalCorpusDocuments = spark.sparkContext().longAccumulator();
 		
-		newsArticleProcessed.collectAsList();
+        //Accumulator<Map<String, Integer>> mapAccumulator = spark.sparkContext().accumulator(new HashMap<>(), new MapAccumulator());
+		Broadcast<List<Query>> query = JavaSparkContext.fromSparkContext(spark.sparkContext()).broadcast(queries.collectAsList());
 		
+		NewsPreprocessor newsArticle = new NewsPreprocessor(totalCorpusDocuments);
+		
+		Dataset<NewsArticleProcessed> newsArticleProcessed = filteredData.map(newsArticle, Encoders.bean(NewsArticleProcessed.class)); // this converts each row into a NewsArticle
+		
+
+		// FlatMap Function
+		Encoder<Tuple2<String, Integer>> tupleEncoder = Encoders.tuple(Encoders.STRING(),Encoders.INT());
+
+		QueryTermFreq querytermfreq = new QueryTermFreq(queries.collectAsList());
+		Dataset<Tuple2<String, Integer>> queryTermFreqTuple = newsArticleProcessed.flatMap(querytermfreq, tupleEncoder); 
+		queryTermFreqTuple.collectAsList();
+		
+		NewsArticleDPHProcessor newsDPHScore = new NewsArticleDPHProcessor(queries.collectAsList(), totalCorpusTerms, totalCorpusDocuments);
+		
+		Dataset<NewsArticleDPHScore> newsArticleDPH = newsArticleProcessed.flatMap(newsDPHScore, Encoders.bean(NewsArticleDPHScore.class)); 
+		
+		newsArticleDPH.collectAsList();
+		
+			
+		//System.out.println("HAET--------"+newsArticleProcessed.count());
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
 	
