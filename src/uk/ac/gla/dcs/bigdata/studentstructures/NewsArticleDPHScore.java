@@ -5,7 +5,7 @@ import java.util.List;
 
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 
-public class NewsArticleDPHScore implements Serializable {
+public class NewsArticleDPHScore implements Serializable, Comparable<NewsArticleDPHScore> {
 	
 	/**
 	 * 
@@ -72,6 +72,12 @@ public class NewsArticleDPHScore implements Serializable {
 	public static long getSerialversionuid() {
 		return serialVersionUID;
 	};
+
+	@SuppressWarnings("deprecation")
+	@Override
+	public int compareTo(NewsArticleDPHScore o) {
+		return new Double(dphScore).compareTo(o.dphScore);
+	}
 	
 
 	

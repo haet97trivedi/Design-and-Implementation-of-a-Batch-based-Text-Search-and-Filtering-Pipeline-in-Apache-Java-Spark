@@ -1,6 +1,7 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -117,34 +118,62 @@ public class AssessedExercise {
 		//----------------------------------------------------------------
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
-		Dataset<NewsArticle> filteredData = news.filter(col("id").isNotNull().and(col("title").isNotNull().and(col("contents.subtype").isNotNull().and(col("contents.content").isNotNull()))));
-        
-		LongAccumulator totalCorpusTerms = spark.sparkContext().longAccumulator();
-		LongAccumulator totalCorpusDocuments = spark.sparkContext().longAccumulator();
-		
-        //Accumulator<Map<String, Integer>> mapAccumulator = spark.sparkContext().accumulator(new HashMap<>(), new MapAccumulator());
 		Broadcast<List<Query>> query = JavaSparkContext.fromSparkContext(spark.sparkContext()).broadcast(queries.collectAsList());
+
 		
-		NewsPreprocessor newsArticle = new NewsPreprocessor(totalCorpusDocuments);
+		Dataset<NewsArticle> filteredData = news.filter(col("id").isNotNull().and(col("title").isNotNull().and(col("contents.subtype").isNotNull().and(col("contents.content").isNotNull()))));
 		
+		LongAccumulator totalDocumentLength = spark.sparkContext().longAccumulator();
+		LongAccumulator totalCorpusDocuments = spark.sparkContext().longAccumulator();
+//		LongAccumulator rowCount = spark.sparkContext().longAccumulator();
+        Long totalDocs = filteredData.count();
+		//System.out.println(filteredData.count());
+//		Long rowCounts = filteredData.count();
+//        //Accumulator<Map<String, Integer>> mapAccumulator = spark.sparkContext().accumulator(new HashMap<>(), new MapAccumulator());
+		
+		NewsPreprocessor newsArticle = new NewsPreprocessor(totalDocumentLength, totalCorpusDocuments, query);
 		Dataset<NewsArticleProcessed> newsArticleProcessed = filteredData.map(newsArticle, Encoders.bean(NewsArticleProcessed.class)); // this converts each row into a NewsArticle
 		
-
-		// FlatMap Function
-		Encoder<Tuple2<String, Integer>> tupleEncoder = Encoders.tuple(Encoders.STRING(),Encoders.INT());
-
-		QueryTermFreq querytermfreq = new QueryTermFreq(queries.collectAsList());
-		Dataset<Tuple2<String, Integer>> queryTermFreqTuple = newsArticleProcessed.flatMap(querytermfreq, tupleEncoder); 
-		queryTermFreqTuple.collectAsList();
+		List<NewsArticleProcessed> list1 = newsArticleProcessed.collectAsList();
 		
-		NewsArticleDPHProcessor newsDPHScore = new NewsArticleDPHProcessor(queries.collectAsList(), totalCorpusTerms, totalCorpusDocuments);
+		//System.out.println("HAETBAKU" + list1.get(list1.size()-1).queryTermMap);
 		
+		HashMap<String, Integer> queryTermMapValue = list1.get(list1.size()-1).queryTermMap;
+		//Dataset<NewsArticleProcessed> newsArticleFilterProcessed = newsArticleProcessed.filter(col("id").and(col("title").and(col("contents"))));
+		
+		//System.out.println("QYERYEYRYE"+queryTermMapValue);
+		
+		//;
+//		for(NewsArticleProcessed na :  newsArticleProcessed.collectAsList()) {
+//			System.out.println("News Article --> "+na.getQueryTermFreqList());
+//
+//		}
+//		newsArticleProcessed.foreach(row -> {
+//            System.out.println(row.getId() + "," + row.getQueryTermFreqList());
+//        });
+		//newsArticleProcessed.count();
+		
+		//Dataset<NewsArticleProcessed> NewsArticleProcessedList = (Dataset<NewsArticleProcessed>) newsArticleProcessed.collectAsList();		
+//		// FlatMap Function
+		//Encoder<Tuple2<String, Integer>> tupleEncoder = Encoders.tuple(Encoders.STRING(),Encoders.INT());
+		//QueryTermFreq querytermfreq = new QueryTermFreq(queries.collectAsList());
+		//Dataset<Tuple2<String, Integer>> queryTermFreqTuple = newsArticleProcessed.flatMap(querytermfreq, tupleEncoder); 
+		//queryTermFreqTuple.collectAsList();
+		
+		
+		NewsArticleDPHProcessor newsDPHScore = new NewsArticleDPHProcessor(query, totalDocumentLength, totalDocs, queryTermMapValue);
 		Dataset<NewsArticleDPHScore> newsArticleDPH = newsArticleProcessed.flatMap(newsDPHScore, Encoders.bean(NewsArticleDPHScore.class)); 
-		
 		newsArticleDPH.collectAsList();
+		//System.out.println("HAETBAKU" + newsArticleDPH.collectAsList());		
+		//List<NewsArticleDPHScore> dph = newsArticleDPH.collectAsList();
 		
-			
-		//System.out.println("HAET--------"+newsArticleProcessed.count());
+//		Collections.sort(newsArticleDPHList);
+//		Collections.reverse(newsArticleDPHList);
+		
+//		for(int ArticleDPHIndex=0; ArticleDPHIndex<10; ArticleDPHIndex++) {
+//			newsArticleDPHList.get(ArticleDPHIndex)
+//		}
+		
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
 	

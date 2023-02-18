@@ -1,7 +1,11 @@
 package uk.ac.gla.dcs.bigdata.studentstructures;
 
+import scala.Tuple2;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+
 
 
 public class NewsArticleProcessed implements Serializable {
@@ -13,14 +17,18 @@ public class NewsArticleProcessed implements Serializable {
 	    String id; // unique article identifier
 		List<String> title; // article title
 		List<String> contents; // the contents of the article body
+		//List<Tuple2<String, Integer>> queryTermFreqList;
+		public static HashMap<String, Integer> queryTermMap = new HashMap<>();
+
 		
 		public NewsArticleProcessed() {}
 
-		public NewsArticleProcessed(String id, List<String> title, List<String> contents) {
+		public NewsArticleProcessed(String id, List<String> title, List<String> contents, HashMap<String, Integer> queryTermMap) {
 			super();
 			this.id = id;
 			this.title = title;
 			this.contents = contents;
+			this.queryTermMap = queryTermMap;
 		}
 
 		public String getId() {
@@ -47,10 +55,18 @@ public class NewsArticleProcessed implements Serializable {
 			this.contents = contents;
 		}
 
+		public static HashMap<String, Integer> getQueryTermMap() {
+			return queryTermMap;
+		}
+
+		public static void setQueryTermMap(HashMap<String, Integer> queryTermMap) {
+			NewsArticleProcessed.queryTermMap = queryTermMap;
+		}
+
 		public static long getSerialversionuid() {
 			return serialVersionUID;
 		}
+
 		
-			
 		
 		}

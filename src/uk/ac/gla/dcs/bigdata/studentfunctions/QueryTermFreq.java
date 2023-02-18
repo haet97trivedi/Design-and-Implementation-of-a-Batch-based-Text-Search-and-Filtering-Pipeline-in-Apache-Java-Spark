@@ -30,6 +30,8 @@ public class QueryTermFreq implements FlatMapFunction<NewsArticleProcessed,Tuple
 	List<Query> queries;
 	List<String> queryTermList;
 	
+	public QueryTermFreq() {}
+	
 	public QueryTermFreq(List<Query> queries) {
 		super();
 		this.queries = queries;
