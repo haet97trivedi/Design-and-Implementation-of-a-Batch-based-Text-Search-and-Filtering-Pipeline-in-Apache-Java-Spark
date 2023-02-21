@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 
@@ -19,8 +20,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
+import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.providedutilities.DPHScorer;
 import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleDPHScore;
@@ -40,7 +43,10 @@ public class NewsArticleDPHProcessor implements FlatMapFunction<NewsArticleProce
 	LongAccumulator totalDocumentLength;
 	Long totalCorpusDocuments;
 	double averageDocumentLengthInCorpus;
-	HashMap<String, Integer> queryTermMapValue; 
+	HashMap<String, Integer> queryTermMapValue;
+	
+	List<RankedResult> RankedResultsList = new LinkedList<RankedResult>();
+	List<DocumentRanking> DocumentRankingList = new LinkedList<DocumentRanking>();
 
 	public NewsArticleDPHProcessor() {}
 	
@@ -57,7 +63,7 @@ public class NewsArticleDPHProcessor implements FlatMapFunction<NewsArticleProce
 	@Override
 	public Iterator<NewsArticleDPHScore> call(NewsArticleProcessed value) throws Exception {
 		
-		
+			
 		//List<Tuple2<String,Integer>> totalQueryTermFrequency = value.getQueryTermFreqList();
 		//HashMap<String,Integer> totalQueryTermFrequency = value.getQueryTermMap();
 		HashMap<String,Integer> totalQueryTermFrequency = queryTermMapValue;
@@ -126,9 +132,12 @@ public class NewsArticleDPHProcessor implements FlatMapFunction<NewsArticleProce
 			//System.out.println("Query Term -> "+query.getOriginalQuery()+" | Average DPH -> "+avgDPHScore);
             if(avgDPHScore > 0)
             {
-			NewsArticleDPHScore newsDPHScores = new NewsArticleDPHScore(query, id, title, contents, avgDPHScore);
-            System.out.println("Query: " + query.getOriginalQuery() + "avgDPHScore: "+ avgDPHScore);
+			NewsArticleDPHScore newsDPHScores = new NewsArticleDPHScore(query, id, title, avgDPHScore, value.getArticle());
+            //System.out.println("Query: " + query.getOriginalQuery() + "avgDPHScore: "+ avgDPHScore);
 			newsArticleDPHScoreList.add(newsDPHScores);
+			
+			RankedResult rankedResult  = new RankedResult(value.getId(), value.getArticle(), avgDPHScore);
+
             }
 
 		}

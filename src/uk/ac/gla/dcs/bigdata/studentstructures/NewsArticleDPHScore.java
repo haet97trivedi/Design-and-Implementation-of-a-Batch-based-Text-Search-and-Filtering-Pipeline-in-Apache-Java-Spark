@@ -3,6 +3,7 @@ package uk.ac.gla.dcs.bigdata.studentstructures;
 import java.io.Serializable;
 import java.util.List;
 
+import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 
 public class NewsArticleDPHScore implements Serializable, Comparable<NewsArticleDPHScore> {
@@ -15,18 +16,18 @@ public class NewsArticleDPHScore implements Serializable, Comparable<NewsArticle
 	Query query;
 	String id;
 	List<String> title;
-	List<String> contents;
 	double dphScore;
+	NewsArticle article;
 	
 	public NewsArticleDPHScore() {}
 
-	public NewsArticleDPHScore(Query query, String id, List<String> title, List<String> contents, double dphScore) {
+	public NewsArticleDPHScore(Query query, String id, List<String> title, double dphScore, NewsArticle article) {
 		super();
 		this.query = query;
 		this.id = id;
 		this.title = title;
-		this.contents = contents;
 		this.dphScore = dphScore;
+		this.article = article;
 	}
 
 	public Query getQuery() {
@@ -53,14 +54,6 @@ public class NewsArticleDPHScore implements Serializable, Comparable<NewsArticle
 		this.title = title;
 	}
 
-	public List<String> getContents() {
-		return contents;
-	}
-
-	public void setContents(List<String> contents) {
-		this.contents = contents;
-	}
-
 	public double getDphScore() {
 		return dphScore;
 	}
@@ -69,9 +62,17 @@ public class NewsArticleDPHScore implements Serializable, Comparable<NewsArticle
 		this.dphScore = dphScore;
 	}
 
+	public NewsArticle getArticle() {
+		return article;
+	}
+
+	public void setArticle(NewsArticle article) {
+		this.article = article;
+	}
+
 	public static long getSerialversionuid() {
 		return serialVersionUID;
-	};
+	}
 
 	@SuppressWarnings("deprecation")
 	@Override

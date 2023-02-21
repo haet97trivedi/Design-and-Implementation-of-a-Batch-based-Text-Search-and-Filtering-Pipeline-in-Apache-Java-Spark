@@ -1,7 +1,6 @@
 package uk.ac.gla.dcs.bigdata.providedstructures;
 
 import java.io.Serializable;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**

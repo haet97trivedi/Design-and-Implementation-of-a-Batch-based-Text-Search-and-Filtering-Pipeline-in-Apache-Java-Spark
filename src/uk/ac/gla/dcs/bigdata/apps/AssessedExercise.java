@@ -9,10 +9,12 @@ import java.util.Map;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.KeyValueGroupedDataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.util.LongAccumulator;
@@ -27,9 +29,13 @@ import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.studentfunctions.NewsArticleDPHProcessor;
 import uk.ac.gla.dcs.bigdata.studentfunctions.NewsPreprocessor;
+import uk.ac.gla.dcs.bigdata.studentfunctions.QueryGroupsRanking;
+import uk.ac.gla.dcs.bigdata.studentfunctions.QueryKeyFunction;
 import uk.ac.gla.dcs.bigdata.studentfunctions.QueryTermFreq;
+import uk.ac.gla.dcs.bigdata.studentfunctions.TopDPHRankedResult;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleDPHScore;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
@@ -123,6 +129,7 @@ public class AssessedExercise {
 		
 		Dataset<NewsArticle> filteredData = news.filter(col("id").isNotNull().and(col("title").isNotNull().and(col("contents.subtype").isNotNull().and(col("contents.content").isNotNull()))));
 		
+		List<NewsArticle> filteredListData = filteredData.collectAsList();
 		LongAccumulator totalDocumentLength = spark.sparkContext().longAccumulator();
 		LongAccumulator totalCorpusDocuments = spark.sparkContext().longAccumulator();
 //		LongAccumulator rowCount = spark.sparkContext().longAccumulator();
@@ -164,17 +171,50 @@ public class AssessedExercise {
 		NewsArticleDPHProcessor newsDPHScore = new NewsArticleDPHProcessor(query, totalDocumentLength, totalDocs, queryTermMapValue);
 		Dataset<NewsArticleDPHScore> newsArticleDPH = newsArticleProcessed.flatMap(newsDPHScore, Encoders.bean(NewsArticleDPHScore.class)); 
 		newsArticleDPH.collectAsList();
-		//System.out.println("HAETBAKU" + newsArticleDPH.collectAsList());		
-		//List<NewsArticleDPHScore> dph = newsArticleDPH.collectAsList();
 		
-//		Collections.sort(newsArticleDPHList);
-//		Collections.reverse(newsArticleDPHList);
 		
+//		List<NewsArticleDPHScore> dph = newsArticleDPH.collectAsList();
+//		
+//		Collections.sort(dph);
+//     	Collections.reverse(dph);
+//     	
+//     	for(NewsArticleDPHScore na: dph) {
+//     		System.out.println("Sorted -> "+na.getQuery().getOriginalQuery() + "DPH -> "+na.getDphScore());
+//     	}
+     	
+     	
+     	// Grouping
+     	
+     	QueryKeyFunction queryKey = new QueryKeyFunction();
+     	
+     	KeyValueGroupedDataset<Query, NewsArticleDPHScore> queryGrouped = newsArticleDPH.groupByKey(queryKey, Encoders.bean(Query.class));
+     	
+     	QueryGroupsRanking queryGroupRanking = new QueryGroupsRanking();
+     	
+     	Dataset<DocumentRanking> newsArticleDPHResult = queryGrouped.flatMapGroups(queryGroupRanking, Encoders.bean(DocumentRanking.class));
+		
+     	List<DocumentRanking> docRankingList = newsArticleDPHResult.collectAsList();
+     	
+     	System.out.println("Document Ranking -> "+docRankingList);
+     	
+     	
+     	
+     	//TopDPHRankedResult fetchOriginalData = new TopDPHRankedResult(filteredListData); 
+     	//Dataset<DocumentRanking> documentRanks = newsArticleDPHResult.flatMap(new TopDPHRankedResult(),Encoders.bean(DocumentRanking.class));
 //		for(int ArticleDPHIndex=0; ArticleDPHIndex<10; ArticleDPHIndex++) {
 //			newsArticleDPHList.get(ArticleDPHIndex)
 //		}
+		//List<DocumentRanking> documentRanksList = documentRanks.collectAsList();
 		
-		return null; // replace this with the the list of DocumentRanking output by your topology
+//		System.out.println(documentRanksList);
+//		for(DocumentRanking dr: documentRanksList) {
+//			System.out.println("List Document Ranking -> " + dr.getQuery().getOriginalQuery());
+//			for(RankedResult rr: dr.getResults()) {
+//				System.out.println("Ranked Result -> "+ rr.getArticle() + " -Score -> "+rr.getScore());
+//			}
+//		}
+				
+		return docRankingList; // replace this with the the list of DocumentRanking output by your topology
 	}
 	
 	

@@ -50,6 +50,8 @@ public class NewsPreprocessor implements MapFunction<NewsArticle,NewsArticleProc
 		public static HashMap<String, Integer> queryTermMap = new HashMap<String, Integer>();
 		public int termFreq=0;
 		
+		public NewsArticle article;
+		
 		public NewsPreprocessor() {}
 		
 		public NewsPreprocessor(LongAccumulator totalDocumentLength,LongAccumulator totalCorpusDocuments, Broadcast<List<Query>> queries) {
@@ -142,7 +144,17 @@ public class NewsPreprocessor implements MapFunction<NewsArticle,NewsArticleProc
 //			}
 			//System.out.println("Query Term List ----> " + queryTermFreqList);
 			
-			NewsArticleProcessed newsArticle = new NewsArticleProcessed(uniqueId, titleProcessed, contentProcessed, queryTermMap);
+//			article.setId(value.getId());
+//			article.setArticle_url(newsArticle.getArticle_url());
+//			article.setTitle(newsArticle.getTitle());
+//			article.setAuthor(newsArticle.getAuthor());
+//			article.setPublished_date(newsArticle.getPublished_date());
+//			article.setContents(newsArticle.getContents());
+//			article.setType(newsArticle.getType());
+//			article.setSource(newsArticle.getSource());
+			
+			article = value;
+			NewsArticleProcessed newsArticle = new NewsArticleProcessed(uniqueId, titleProcessed, contentProcessed, queryTermMap, article);
 			
 			totalDocumentLength.add(titleProcessed.size() + contentProcessed.size());
 			//totalCorpusDocuments.add(1);
